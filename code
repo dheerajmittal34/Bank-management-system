@@ -1,0 +1,221 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.HashMap;
+
+public class BankApp {
+
+    public static void main(String[] args) {
+        new LoginFrame();
+    }
+
+    // ------------------ BankAccount Class ------------------
+    static class BankAccount {
+        private String username;
+        private String password;
+        private double balance;
+
+        public BankAccount(String username, String password) {
+            this.username = username;
+            this.password = password;
+            this.balance = 0.0;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public boolean checkPassword(String input) {
+            return password.equals(input);
+        }
+
+        public double getBalance() {
+            return balance;
+        }
+
+        public void deposit(double amount) {
+            if (amount > 0) balance += amount;
+        }
+
+        public boolean withdraw(double amount) {
+            if (amount > 0 && amount <= balance) {
+                balance -= amount;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    // ------------------ BankDatabase Class ------------------
+    static class BankDatabase {
+        private static HashMap<String, BankAccount> accounts = new HashMap<>();
+
+        public static boolean register(String username, String password) {
+            if (accounts.containsKey(username)) return false;
+            accounts.put(username, new BankAccount(username, password));
+            return true;
+        }
+
+        public static BankAccount login(String username, String password) {
+            BankAccount acc = accounts.get(username);
+            if (acc != null && acc.checkPassword(password)) return acc;
+            return null;
+        }
+    }
+
+    // ------------------ LoginFrame Class ------------------
+    static class LoginFrame extends JFrame {
+        public LoginFrame() {
+            setTitle("Bank Login");
+            setSize(300, 200);
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            setLocationRelativeTo(null);
+
+            JLabel userLabel = new JLabel("Username:");
+            JTextField userText = new JTextField(15);
+            JLabel passLabel = new JLabel("Password:");
+            JPasswordField passText = new JPasswordField(15);
+            JButton loginButton = new JButton("Login");
+            JButton registerButton = new JButton("Register");
+
+            JPanel panel = new JPanel(new GridLayout(4, 2, 5, 5));
+            panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            panel.add(userLabel);
+            panel.add(userText);
+            panel.add(passLabel);
+            panel.add(passText);
+            panel.add(loginButton);
+            panel.add(registerButton);
+
+            add(panel);
+
+            loginButton.addActionListener(e -> {
+                String user = userText.getText();
+                String pass = new String(passText.getPassword());
+                BankAccount acc = BankDatabase.login(user, pass);
+                if (acc != null) {
+                    dispose();
+                    new DashboardFrame(acc);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid login");
+                }
+            });
+
+            registerButton.addActionListener(e -> {
+                dispose();
+                new RegisterFrame();
+            });
+
+            setVisible(true);
+        }
+    }
+
+    // ------------------ RegisterFrame Class ------------------
+    static class RegisterFrame extends JFrame {
+        public RegisterFrame() {
+            setTitle("Register Account");
+            setSize(300, 200);
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            setLocationRelativeTo(null);
+
+            JLabel userLabel = new JLabel("Username:");
+            JTextField userText = new JTextField(15);
+            JLabel passLabel = new JLabel("Password:");
+            JPasswordField passText = new JPasswordField(15);
+            JButton registerButton = new JButton("Register");
+
+            JPanel panel = new JPanel(new GridLayout(3, 2, 5, 5));
+            panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            panel.add(userLabel);
+            panel.add(userText);
+            panel.add(passLabel);
+            panel.add(passText);
+            panel.add(new JLabel());
+            panel.add(registerButton);
+
+            add(panel);
+
+            registerButton.addActionListener(e -> {
+                String user = userText.getText();
+                String pass = new String(passText.getPassword());
+                if (BankDatabase.register(user, pass)) {
+                    JOptionPane.showMessageDialog(this, "Registration successful!");
+                    dispose();
+                    new LoginFrame();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Username already exists");
+                }
+            });
+
+            setVisible(true);
+        }
+    }
+
+    // ------------------ DashboardFrame Class ------------------
+    static class DashboardFrame extends JFrame {
+        private BankAccount account;
+        private JLabel balanceLabel;
+
+        public DashboardFrame(BankAccount acc) {
+            this.account = acc;
+
+            setTitle("Dashboard - " + acc.getUsername());
+            setSize(350, 200);
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            setLocationRelativeTo(null);
+
+            balanceLabel = new JLabel("Balance: $" + String.format("%.2f", account.getBalance()), SwingConstants.CENTER);
+
+            JButton depositButton = new JButton("Deposit");
+            JButton withdrawButton = new JButton("Withdraw");
+            JButton logoutButton = new JButton("Logout");
+
+            depositButton.addActionListener(e -> {
+                String amountStr = JOptionPane.showInputDialog(this, "Enter deposit amount:");
+                try {
+                    double amount = Double.parseDouble(amountStr);
+                    account.deposit(amount);
+                    refreshBalance();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Invalid amount");
+                }
+            });
+
+            withdrawButton.addActionListener(e -> {
+                String amountStr = JOptionPane.showInputDialog(this, "Enter withdrawal amount:");
+                try {
+                    double amount = Double.parseDouble(amountStr);
+                    if (account.withdraw(amount)) {
+                        refreshBalance();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Insufficient funds or invalid amount");
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Invalid amount");
+                }
+            });
+
+            logoutButton.addActionListener(e -> {
+                dispose();
+                new LoginFrame();
+            });
+
+            JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 5, 5));
+            buttonPanel.add(depositButton);
+            buttonPanel.add(withdrawButton);
+            buttonPanel.add(logoutButton);
+
+            JPanel mainPanel = new JPanel(new BorderLayout());
+            mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            mainPanel.add(balanceLabel, BorderLayout.NORTH);
+            mainPanel.add(buttonPanel, BorderLayout.CENTER);
+
+            add(mainPanel);
+            setVisible(true);
+        }
+
+        private void refreshBalance() {
+            balanceLabel.setText("Balance: $" + String.format("%.2f", account.getBalance()));
+        }
+    }
+}
